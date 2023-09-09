@@ -45,7 +45,6 @@ CREATE TABLE IF NOT EXISTS candidato (
     FOREIGN KEY (id_partido) REFERENCES partido(id_partido)
 );
 
-
 CREATE TABLE IF NOT EXISTS voto (
     id_voto INT NOT NULL  PRIMARY KEY,
     fechahora_voto DATE NOT NULL,
@@ -65,6 +64,3 @@ CREATE TABLE IF NOT EXISTS detalle_voto (
 
 --Eliminar tablas
 DROP TABLE IF EXISTS cargo, ciudadano, candidato, partido, voto, detalle_voto, mesa, departamento;
-
---Mostrar tablas si es necesario
-show databases;
