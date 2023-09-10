@@ -21,36 +21,106 @@ def rutaInicial():
 
 @app.route('/consulta1', methods=['GET'])
 def consulta1():
-    cursor = conexion.connection.cursor()
-    cursor.execute("""SELECT nombre.
-                   FROM candidato WHERE car;""")
-    return("Ruta inicial")
+    try:
+        cursor = conexion.connection.cursor()
+        try:
+            cursor.execute("""SELECT
+                P.nombre_partido AS partido,
+                (SELECT C1.nombre FROM candidato C1 WHERE C1.id_partido = P.id_partido AND C1.id_cargo = 1) AS nombre_presidente,
+                (SELECT C2.nombre FROM candidato C2 WHERE C2.id_partido = P.id_partido AND C2.id_cargo = 2) AS nombre_vicepresidente
+            FROM partido P;
+                        """)
+            res = cursor.fetchall()
+            resjson = []
+            for x in res:
+                resjson.append({"Partido": x[0], "Presidente": x[1], "Vicepresidente": x[2]})
+            return jsonify(resjson)    
+        except Exception as e:
+                print("Error al consultar:", str(e))    
+                
+        res = cursor.fetchall()
+        resjson = []
+        for x in res:
+            resjson.append({"Candidato": x[0], "Partido": x[1]})
+        return jsonify(resjson)
+    except:
+        return("Error en consulta 1")
 
 @app.route('/consulta2', methods=['GET'])
 def consulta2():
     try:
         cursor = conexion.connection.cursor()
-        cursor.execute("""SELECT COUNT(*) AS numero_de_registros
-        FROM candidato
-        WHERE id_cargo IN (3, 4, 5);""")
+        cursor.execute("""SELECT COUNT(*) AS cuenta, p.nombre_partido AS partido
+        FROM candidato c 
+        inner join partido p on c.id_partido = p.id_partido 
+        inner join cargo ca on c.id_cargo = ca.id_cargo
+        WHERE c.id_cargo IN (3, 4, 5)
+        GROUP BY c.id_partido;""")
         cantidad = cursor.fetchall()
-    
-        print(cantidad)
-        return jsonify({"Numero de candidatos a diputados": cantidad[0][0]})
+        resjson = []
+            
+        for x in cantidad:
+            resjson.append({"Cantidad de candidatos a diputados": x[0], "Partido": x[1]})
+            
+        return jsonify(resjson)
     except:
-        return("Error")
+        return("Error en consulta 2")
 
 @app.route('/consulta3', methods=['GET'])
 def consulta3():
-    return("Ruta inicial")
+    try:
+        cursor = conexion.connection.cursor()
+        cursor.execute("""SELECT p.nombre_partido AS partido, c.nombre AS candidato
+        FROM candidato c
+        INNER JOIN partido p ON c.id_partido = p.id_partido
+        WHERE c.id_cargo = 6;""")
+        res = cursor.fetchall()
+        resjson = []
+        for x in res:
+            resjson.append({"Partido": x[0], "Candidato": x[1]})
+        
+            
+        return jsonify(resjson)
+    except:
+        return("Error en consulta 3")
 
 @app.route('/consulta4', methods=['GET'])
 def consulta4():
-    return("Ruta inicial")
+    try:
+        cursor = conexion.connection.cursor()
+        cursor.execute("""SELECT COUNT(c.nombre) as cuenta, p.nombre_partido AS partido
+                    FROM candidato c 
+                    inner join partido p on c.id_partido = p.id_partido 
+                    inner join cargo ca on c.id_cargo = ca.id_cargo
+                    WHERE c.id_cargo IN (1, 2,3,4,5,6)
+                    GROUP BY c.id_partido;""")
+        res = cursor.fetchall()
+
+        resjson = []
+        for x in res:
+            resjson.append({"Cantidad de candidatos": x[0], "Partido": x[1]})
+        return jsonify(resjson)
+    except:
+        return("Error en consulta 4")
 
 @app.route('/consulta5', methods=['GET'])
 def consulta5():
-    return("Ruta inicial")
+    try:
+        cursor = conexion.connection.cursor()
+        cursor.execute("""SELECT COUNT(*) AS numero_de_registros, d.nombre_departamento AS departamento
+FROM detalle_voto dv
+INNER JOIN voto v ON dv.id_voto = v.id_voto
+INNER JOIN mesa m ON v.id_mesa = m.id_mesa
+INNER JOIN departamento d ON m.id_departamento = d.id_departamento
+GROUP BY d.nombre_departamento;""")
+        cantidad = cursor.fetchall()
+        resjson = []
+        for x in cantidad:
+            resjson.append({"Numero de votos": x[0], "Departamento": x[1]})
+        
+        return jsonify(resjson)
+    except:
+        return("Error en consulta 5")
 
 @app.route('/consulta6', methods=['GET'])
 def consulta6():
@@ -60,31 +130,132 @@ def consulta6():
         FROM detalle_voto
         WHERE id_candidato = -1;""")
         cantidad = cursor.fetchall()
-    
-        print(cantidad)
         return jsonify({"Numero de votos nulos": cantidad[0][0]})
     except:
-        return("Error")
+        return("Error en consulta 6")
 
 @app.route('/consulta7', methods=['GET'])
 def consulta7():
-    return("Ruta inicial")
+    try:
+        cursor = conexion.connection.cursor()
+        cursor.execute("""SELECT c.edad, COUNT(*) AS frecuencia
+FROM voto v
+INNER JOIN ciudadano c ON v.dpi = c.dpi
+GROUP BY c.edad
+ORDER BY COUNT(*) DESC
+LIMIT 10;""")
+        cantidad = cursor.fetchall()
+
+        resjson = [] 
+        for x in cantidad:
+            resjson.append({"Edad": x[0], "Frecuencia": x[1]} )
+        
+        return jsonify(resjson)
+    except:
+        return("Error en consulta 7")
 
 @app.route('/consulta8', methods=['GET'])
 def consulta8():
-    return("Ruta inicial")
+    try:
+        cursor = conexion.connection.cursor()
+        cursor.execute("""WITH PresidenteVicepresidente AS (
+    SELECT
+        CASE WHEN c.id_cargo = 1 THEN c.nombre END AS nombre_presidente,
+        CASE WHEN c.id_cargo = 2 THEN c.nombre END AS nombre_vicepresidente,
+        dv.id_voto
+    FROM detalle_voto dv
+    INNER JOIN candidato c ON dv.id_candidato = c.id_candidato
+    WHERE c.id_cargo IN (1, 2)
+)
+
+SELECT
+    nombre_presidente,
+    nombre_vicepresidente,
+    COUNT(*) AS cantidad_de_votos
+FROM PresidenteVicepresidente
+GROUP BY nombre_presidente, nombre_vicepresidente
+ORDER BY cantidad_de_votos DESC
+LIMIT 10;""")
+        cantidad = cursor.fetchall()
+        print(cantidad)
+
+        resjson = [] 
+        
+        
+        return jsonify(resjson)
+    except Exception as e:
+        print("Error al insertar:", str(e))
+        return("Error en consulta 8")
 
 @app.route('/consulta9', methods=['GET'])
 def consulta9():
-    return("Ruta inicial")
+    try:
+        cursor = conexion.connection.cursor()
+        cursor.execute("""SELECT m.id_mesa AS numero_de_mesa, d.nombre_departamento AS departamento
+FROM detalle_voto dv
+INNER JOIN voto v ON dv.id_voto = v.id_voto
+INNER JOIN mesa m ON v.id_mesa = m.id_mesa
+INNER JOIN departamento d ON m.id_departamento = d.id_departamento
+GROUP BY m.id_mesa, d.nombre_departamento
+ORDER BY COUNT(*) DESC
+LIMIT 5;""")
+        cantidad = cursor.fetchall()
+        print(cantidad)
+
+        resjson = [] 
+        for x in cantidad:
+            resjson.append({"Departamento": x[0], "Numero de mesa": x[1]} )
+        
+        
+        return jsonify(resjson)
+    except Exception as e:
+        print("Error al insertar:", str(e))
+        return("Error en consulta 9")
 
 @app.route('/consulta10', methods=['GET'])
 def consulta10():
-    return("Ruta inicial")
+    try:
+        cursor = conexion.connection.cursor()
+        cursor.execute("""SELECT
+    DATE_FORMAT(v.fechahora_voto, '%H:%i') AS hora,
+    COUNT(*) AS cantidad_de_votos
+FROM detalle_voto dv
+INNER JOIN voto v ON dv.id_voto = v.id_voto
+GROUP BY DATE_FORMAT(v.fechahora_voto, '%H:%i')
+ORDER BY cantidad_de_votos DESC
+LIMIT 5;""")
+        cantidad = cursor.fetchall()
+        print(cantidad)
+
+        resjson = [] 
+        for x in cantidad:
+            resjson.append({"Hora": x[0], "Cantidad de votos": x[1]} )
+        
+        
+        return jsonify(resjson)
+    except Exception as e:
+        print("Error al insertar:", str(e))
+        return("Error en consulta 10")
 
 @app.route('/consulta11', methods=['GET'])
 def consulta12():
-    return("Ruta inicial")
+    try:
+        cursor = conexion.connection.cursor()
+        cursor.execute("""SELECT c.genero AS genero, COUNT(*) AS cantidad_de_votos
+FROM detalle_voto dv
+INNER JOIN voto v ON dv.id_voto = v.id_voto
+INNER JOIN ciudadano c ON c.dpi = v.dpi
+GROUP BY c.genero;""")
+        cantidad = cursor.fetchall()
+        resjson = []
+        for x in cantidad:
+            resjson.append({"Genero": x[0], "Cantidad de votos": x[1]})
+
+        return jsonify(resjson)
+    except Exception as e:
+        print("Error al insertar:", str(e))
+        
+        return("Error en consulta 11")
 
 @app.route('/cargartabtemp', methods=['GET'])
 def cargartabtemp():
@@ -143,7 +314,7 @@ def cargartabtemp():
         id_candidato INT NOT NULL,
         dpi VARCHAR(13) NOT NULL,
         id_mesa INT NOT NULL,
-        fechahora_voto DATE NOT NULL
+        fechahora_voto DATETIME NOT NULL
         );
         """)
         
@@ -287,7 +458,7 @@ def crarmodelo():
         id_candidato INT NOT NULL,
         dpi VARCHAR(13) NOT NULL,
         id_mesa INT NOT NULL,
-        fechahora_voto DATE NOT NULL, 
+        fechahora_voto DATETIME NOT NULL, 
         FOREIGN KEY (dpi) REFERENCES ciudadano(dpi),
         FOREIGN KEY (id_mesa) REFERENCES mesa(id_mesa)
         );
