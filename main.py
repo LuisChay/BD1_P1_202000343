@@ -155,31 +155,37 @@ LIMIT 10;""")
         return("Error en consulta 7")
 
 @app.route('/consulta8', methods=['GET'])
+
+            
+        # WITH PresidenteVicepresidente AS (
+        #     SELECT
+        #         CASE WHEN c.id_cargo = 1 THEN c.nombre END AS nombre_presidente,
+        #         CASE WHEN c.id_cargo = 2 THEN c.nombre END AS nombre_vicepresidente,
+        #         dv.id_voto
+        #     FROM detalle_voto dv
+        #     INNER JOIN candidato c ON dv.id_candidato = c.id_candidato
+        #     WHERE c.id_cargo IN (1, 2)
+        # )
+
+
 def consulta8():
     try:
         cursor = conexion.connection.cursor()
-        cursor.execute("""WITH PresidenteVicepresidente AS (
-    SELECT
-        CASE WHEN c.id_cargo = 1 THEN c.nombre END AS nombre_presidente,
-        CASE WHEN c.id_cargo = 2 THEN c.nombre END AS nombre_vicepresidente,
-        dv.id_voto
-    FROM detalle_voto dv
-    INNER JOIN candidato c ON dv.id_candidato = c.id_candidato
-    WHERE c.id_cargo IN (1, 2)
-)
-
-SELECT
-    nombre_presidente,
-    nombre_vicepresidente,
-    COUNT(*) AS cantidad_de_votos
-FROM PresidenteVicepresidente
-GROUP BY nombre_presidente, nombre_vicepresidente
-ORDER BY cantidad_de_votos DESC
-LIMIT 10;""")
+        cursor.execute("""      
+        SELECT c1.nombre AS nombre_presidente, c2.nombre AS nombre_vicepresidente, COUNT(*) AS cantidad_de_votos
+        FROM candidato as c1
+        INNER JOIN candidato as c2 ON c1.id_partido = c2.id_partido AND (c1.id_cargo = 1 AND c2.id_cargo = 2)
+        INNER JOIN detalle_voto as dv ON c1.id_candidato = dv.id_candidato
+        GROUP BY nombre_presidente, nombre_vicepresidente
+        ORDER BY cantidad_de_votos DESC
+        LIMIT 10;
+        """)
         cantidad = cursor.fetchall()
         print(cantidad)
 
         resjson = [] 
+        for x in cantidad:
+            resjson.append({"Presidente": x[0], "Vicepresidente": x[1], "Cantidad de votos": x[2]} )
         
         
         return jsonify(resjson)
