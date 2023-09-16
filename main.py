@@ -28,7 +28,8 @@ def consulta1():
                 P.nombre_partido AS partido,
                 (SELECT C1.nombre FROM candidato C1 WHERE C1.id_partido = P.id_partido AND C1.id_cargo = 1) AS nombre_presidente,
                 (SELECT C2.nombre FROM candidato C2 WHERE C2.id_partido = P.id_partido AND C2.id_cargo = 2) AS nombre_vicepresidente
-            FROM partido P;
+            FROM partido P
+            WHERE P.nombre_partido <> 'NULO';
                         """)
             res = cursor.fetchall()
             resjson = []
@@ -106,11 +107,11 @@ def consulta4():
 @app.route('/consulta5', methods=['GET'])
 def consulta5():
     try:
+        #INNER JOIN voto v ON dv.id_voto = v.id_voto
         cursor = conexion.connection.cursor()
         cursor.execute("""SELECT COUNT(*) AS numero_de_registros, d.nombre_departamento AS departamento
-FROM detalle_voto dv
-INNER JOIN voto v ON dv.id_voto = v.id_voto
-INNER JOIN mesa m ON v.id_mesa = m.id_mesa
+FROM voto dv
+INNER JOIN mesa m ON dv.id_mesa = m.id_mesa
 INNER JOIN departamento d ON m.id_departamento = d.id_departamento
 GROUP BY d.nombre_departamento;""")
         cantidad = cursor.fetchall()
@@ -127,7 +128,7 @@ def consulta6():
     try:
         cursor = conexion.connection.cursor()
         cursor.execute("""SELECT COUNT(*) AS numero_de_registros
-        FROM detalle_voto
+        FROM voto
         WHERE id_candidato = -1;""")
         cantidad = cursor.fetchall()
         return jsonify({"Numero de votos nulos": cantidad[0][0]})
@@ -157,16 +158,6 @@ LIMIT 10;""")
 @app.route('/consulta8', methods=['GET'])
 
             
-        # WITH PresidenteVicepresidente AS (
-        #     SELECT
-        #         CASE WHEN c.id_cargo = 1 THEN c.nombre END AS nombre_presidente,
-        #         CASE WHEN c.id_cargo = 2 THEN c.nombre END AS nombre_vicepresidente,
-        #         dv.id_voto
-        #     FROM detalle_voto dv
-        #     INNER JOIN candidato c ON dv.id_candidato = c.id_candidato
-        #     WHERE c.id_cargo IN (1, 2)
-        # )
-
 
 def consulta8():
     try:
@@ -181,8 +172,6 @@ def consulta8():
         LIMIT 10;
         """)
         cantidad = cursor.fetchall()
-        print(cantidad)
-
         resjson = [] 
         for x in cantidad:
             resjson.append({"Presidente": x[0], "Vicepresidente": x[1], "Cantidad de votos": x[2]} )
@@ -195,22 +184,21 @@ def consulta8():
 
 @app.route('/consulta9', methods=['GET'])
 def consulta9():
+    #INNER JOIN voto v ON dv.id_voto = v.id_voto
     try:
         cursor = conexion.connection.cursor()
-        cursor.execute("""SELECT m.id_mesa AS numero_de_mesa, d.nombre_departamento AS departamento
-FROM detalle_voto dv
-INNER JOIN voto v ON dv.id_voto = v.id_voto
-INNER JOIN mesa m ON v.id_mesa = m.id_mesa
+        cursor.execute("""SELECT m.id_mesa AS numero_de_mesa, d.nombre_departamento AS departamento, COUNT(*) AS cantidad_de_votos
+FROM voto dv
+INNER JOIN mesa m ON dv.id_mesa = m.id_mesa
 INNER JOIN departamento d ON m.id_departamento = d.id_departamento
 GROUP BY m.id_mesa, d.nombre_departamento
-ORDER BY COUNT(*) DESC
+ORDER BY cantidad_de_votos DESC
 LIMIT 5;""")
         cantidad = cursor.fetchall()
-        print(cantidad)
-
+        
         resjson = [] 
         for x in cantidad:
-            resjson.append({"Departamento": x[0], "Numero de mesa": x[1]} )
+            resjson.append({"Numero de mesa": x[0], "Departamento": x[1], "Cantidad de votos": x[2]} )
         
         
         return jsonify(resjson)
@@ -220,19 +208,17 @@ LIMIT 5;""")
 
 @app.route('/consulta10', methods=['GET'])
 def consulta10():
+    #INNER JOIN voto v ON dv.id_voto = v.id_voto
     try:
         cursor = conexion.connection.cursor()
         cursor.execute("""SELECT
-    DATE_FORMAT(v.fechahora_voto, '%H:%i') AS hora,
+    DATE_FORMAT(dv.fechahora_voto, '%H:%i') AS hora,
     COUNT(*) AS cantidad_de_votos
-FROM detalle_voto dv
-INNER JOIN voto v ON dv.id_voto = v.id_voto
-GROUP BY DATE_FORMAT(v.fechahora_voto, '%H:%i')
+FROM voto dv
+GROUP BY DATE_FORMAT(dv.fechahora_voto, '%H:%i')
 ORDER BY cantidad_de_votos DESC
 LIMIT 5;""")
         cantidad = cursor.fetchall()
-        print(cantidad)
-
         resjson = [] 
         for x in cantidad:
             resjson.append({"Hora": x[0], "Cantidad de votos": x[1]} )
@@ -245,12 +231,12 @@ LIMIT 5;""")
 
 @app.route('/consulta11', methods=['GET'])
 def consulta12():
+    #INNER JOIN voto v ON dv.id_voto = v.id_voto
     try:
         cursor = conexion.connection.cursor()
         cursor.execute("""SELECT c.genero AS genero, COUNT(*) AS cantidad_de_votos
-FROM detalle_voto dv
-INNER JOIN voto v ON dv.id_voto = v.id_voto
-INNER JOIN ciudadano c ON c.dpi = v.dpi
+FROM voto dv
+INNER JOIN ciudadano c ON c.dpi = dv.dpi
 GROUP BY c.genero;""")
         cantidad = cursor.fetchall()
         resjson = []

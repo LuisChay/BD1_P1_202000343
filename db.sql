@@ -138,11 +138,9 @@ INSERT INTO detalle_voto (id_voto, id_candidato) VALUES (%s,%s);
 
 -- CONSULTAS
 -- Consulta 1
-SELECT
-    P.nombre_partido AS partido,
-    (SELECT C1.nombre FROM candidato C1 WHERE C1.id_partido = P.id_partido AND C1.id_cargo = 1) AS nombre_presidente,
-    (SELECT C2.nombre FROM candidato C2 WHERE C2.id_partido = P.id_partido AND C2.id_cargo = 2) AS nombre_vicepresidente
-FROM partido P;
+SELECT P.nombre_partido AS partido, (SELECT C1.nombre FROM candidato C1 WHERE C1.id_partido = P.id_partido AND C1.id_cargo = 1) AS nombre_presidente, (SELECT C2.nombre FROM candidato C2 WHERE C2.id_partido = P.id_partido AND C2.id_cargo = 2) AS nombre_vicepresidente
+FROM partido P
+WHERE P.nombre_partido <> 'NULO';
 -- Consulta 2
 SELECT COUNT(*) AS cuenta, p.nombre_partido AS partido
 FROM candidato c 
@@ -164,14 +162,13 @@ WHERE c.id_cargo IN (1, 2,3,4,5,6)
 GROUP BY c.id_partido;
 -- Consulta 5 
 SELECT COUNT(*) AS numero_de_registros, d.nombre_departamento AS departamento
-FROM detalle_voto dv
-INNER JOIN voto v ON dv.id_voto = v.id_voto
-INNER JOIN mesa m ON v.id_mesa = m.id_mesa
+FROM voto dv
+INNER JOIN mesa m ON dv.id_mesa = m.id_mesa
 INNER JOIN departamento d ON m.id_departamento = d.id_departamento
-GROUP BY d.nombre_departamento;
+GROUP BY d.nombre_departamento
 -- Consulta 6
 SELECT COUNT(*) AS numero_de_registros
-FROM detalle_voto
+FROM voto
 WHERE id_candidato = -1;
 -- Consulta 7
 SELECT c.edad, COUNT(*) AS frecuencia
@@ -181,23 +178,31 @@ GROUP BY c.edad
 ORDER BY COUNT(*) DESC
 LIMIT 10;
 -- Consulta 8
-
+SELECT c1.nombre AS nombre_presidente, c2.nombre AS nombre_vicepresidente, COUNT(*) AS cantidad_de_votos
+FROM candidato as c1
+INNER JOIN candidato as c2 ON c1.id_partido = c2.id_partido AND (c1.id_cargo = 1 AND c2.id_cargo = 2)
+INNER JOIN detalle_voto as dv ON c1.id_candidato = dv.id_candidato
+GROUP BY nombre_presidente, nombre_vicepresidente
+ORDER BY cantidad_de_votos DESC
+LIMIT 10;
 -- Consulta 9
-SELECT m.id_mesa AS numero_de_mesa, d.nombre_departamento AS departamento
-FROM detalle_voto dv
-INNER JOIN voto v ON dv.id_voto = v.id_voto
-INNER JOIN mesa m ON v.id_mesa = m.id_mesa
+SELECT m.id_mesa AS numero_de_mesa, d.nombre_departamento AS departamento, COUNT(*) AS cantidad_de_votos
+FROM voto dv
+INNER JOIN mesa m ON dv.id_mesa = m.id_mesa
 INNER JOIN departamento d ON m.id_departamento = d.id_departamento
 GROUP BY m.id_mesa, d.nombre_departamento
-ORDER BY COUNT(*) DESC
+ORDER BY cantidad_de_votos DESC
 LIMIT 5;
 -- Consulta 10
-
+SELECT DATE_FORMAT(dv.fechahora_voto, '%H:%i') AS hora, COUNT(*) AS cantidad_de_votos
+FROM voto dv
+GROUP BY DATE_FORMAT(dv.fechahora_voto, '%H:%i')
+ORDER BY cantidad_de_votos DESC
+LIMIT 5;
 -- Consulta 11
 SELECT c.genero AS genero, COUNT(*) AS cantidad_de_votos
-FROM detalle_voto dv
-INNER JOIN voto v ON dv.id_voto = v.id_voto
-INNER JOIN ciudadano c ON c.dpi = v.dpi
+FROM voto dv
+INNER JOIN ciudadano c ON c.dpi = dv.dpi
 GROUP BY c.genero;
 --Eliminar tablas
 DROP TABLE IF EXISTS cargo, ciudadano, candidato, partido, voto, detalle_voto, mesa, departamento;
